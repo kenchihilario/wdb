@@ -1,64 +1,79 @@
-name: kenchi
-
 services:
-  laravel:
-    build:
-      context: ./backend
-    ports:
-      - "8000:80"
-    volumes:
-      - ./backend:/var/www/html
-      - ./.env:/var/www/html/.env
-    depends_on:
-      - mysql
-    command: >
-      sh -c "
-        mkdir -p storage/logs &&
-        chown -R www-data:www-data storage bootstrap/cache &&
-        chmod -R 775 storage bootstrap/cache &&
-        exec apache2-foreground
-      "
-    networks:
-      - laravel-network
-
-  frontend:
-    build:
-      context: ./frontend
-    ports:
-      - "3000:3000"
-      - "80:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - laravel
-    networks:
-      - laravel-network
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8.4
+    container_name: mysql
+
     restart: unless-stopped
+
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: laravel
       MYSQL_USER: laravel
       MYSQL_PASSWORD: secret
+
     ports:
-      - "3307:3306"
+      - "3306:3306"
+
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - laravel-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: laravel
+
+    restart: unless-stopped
+
+    depends_on:
+      - mysql
+
+    working_dir: /var/www/html
+
+    volumes:
+      - ./backend:/var/www/html
+
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+
+  nginx:
+    image: nginx:alpine
+
+    container_name: nginx
+
+    depends_on:
+      - backend
+
+    ports:
+      - "8000:80"
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: nextjs
+
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "3000:3000"
+      - "80:3000"
+
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
 
 volumes:
   mysql_data:
-
-networks:
-  laravel-network:
-    driver: bridge

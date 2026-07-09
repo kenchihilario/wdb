@@ -1,22 +1,20 @@
-FROM php:8.3-apache
-
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+FROM php:8.4-fpm
 
 RUN apt-get update && apt-get install -y \
     git \
+    curl \
     unzip \
     zip \
-    curl \
     libzip-dev \
-    && docker-php-ext-install pdo_mysql zip \
-    && a2enmod rewrite \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/sites-available/*.conf \
-    /etc/apache2/apache2.conf \
-    /etc/apache2/conf-available/*.conf
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    default-mysql-client \
+    && docker-php-ext-install \
+        pdo_mysql \
+        zip \
+        bcmath \
+        exif
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -24,8 +22,12 @@ WORKDIR /var/www/html
 
 COPY . .
 
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader
 
-EXPOSE 80
+RUN chown -R www-data:www-data storage bootstrap/cache
 
-CMD ["apache2-foreground"]
+EXPOSE 9000
+
+CMD ["php-fpm"]

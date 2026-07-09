@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
+import ProductStore from "./components/ProductStore";
 
 export default async function Home() {
   const headersList = await headers();
-
   const host = headersList.get("host") ?? "localhost:3000";
 
   return (
@@ -12,10 +12,12 @@ export default async function Home() {
         backgroundColor: "black",
         color: "white",
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
         textAlign: "center",
         fontFamily: "Arial, sans-serif",
+        padding: "40px",
       }}
     >
       <div>
@@ -37,6 +39,16 @@ export default async function Home() {
         <p>Laravel v12.62.0</p>
         <p>Next.js v16.2.10</p>
       </div>
+
+      <hr
+        style={{
+          width: "100%",
+          margin: "40px 0",
+          borderColor: "#444",
+        }}
+      />
+
+      <ProductStore />
     </main>
   );
 }
